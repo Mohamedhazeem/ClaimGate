@@ -4,12 +4,14 @@ This repository is a native Hermes Agent plugin that enforces a regulated
 evidence-readiness boundary for insurance claim submissions. Treat it as
 security-sensitive production code, not a demo.
 
-> **Current scaffold state:** domain models, policy loading, trusted-registry
-> lookups, package hashing, audit/review persistence, the operator CLI, and the
-> fail-closed hook are wired. `DecisionEngine.evaluate()` in
-> `src/claim_gate/services/engine.py` is intentionally **not implemented**
-> (Slice 2). Until it is, every protected submission must fail closed. Do not
-> "temporarily" allow submissions to make a demo work.
+> **Current scaffold state:** domain models, policy loading and evaluation,
+> trusted-registry lookups, package hashing, audit/review persistence, the
+> operator CLI, and the fail-closed hook are wired. Slice 2 is implemented:
+> `DecisionEngine.evaluate()` delegates to the pure
+> `domain/policy.py::evaluate_claim()`, so a protected submission is allowed
+> only on a deterministic PASS. Slice 3 (audit rows, review queue, release
+> flow) is still outstanding; do not "temporarily" bypass the gate to make a
+> demo work.
 
 ## 1. Non-negotiable security invariants
 
@@ -146,24 +148,26 @@ point for `submit_claim_package`.
 ## 4. Implementation boundaries
 
 - `domain/claim.py`: normalization, strict dates, incident-date math.
-- `domain/policy.py`: policy schema, validation, canonical hash.
+- `domain/policy.py`: policy schema, validation, canonical hash, and the pure
+  `evaluate_claim()` 3-tier evaluation.
 - `services/registry.py`: trusted SQLite lookups and schema bootstrap.
-- `services/engine.py`: pure 3-tier evaluation plus assessment composition.
+- `services/engine.py`: 3-tier evaluation adapter plus assessment composition.
 - `services/audit.py`: package hash, audit, review queue, ledger.
 - `tools/submissions.py`: model-facing submission adapter.
 - `tools/admin.py`: `claim_check`, `claim_policy_get`, `claim_audit`.
 - `hooks/execution_gate.py`: enforcement adapters.
 - `cli/review.py`: operator-only review list/release.
 
-When implementing Slice 2, replace only the body of
-`DecisionEngine.evaluate()`. Do not move policy checks into the hook, and do
-not duplicate them in the handler. Keep this precedence:
+Slice 2 landed as a pure `domain/policy.py::evaluate_claim()` with
+`services/engine.py::DecisionEngine.evaluate()` as a thin adapter. The policy
+rules must not move into the hook, and they must not be duplicated in the
+handler. The precedence is:
 
-1. **BLOCK** — policy mismatch/expired term/unknown coverage; missing or
-   unverified required document; forged, missing, cross-claim, or unverified
-   reference.
-2. **HUMAN_REVIEW** — required verified fact missing; verified fact matches a
-   review trigger; incident date inside the waiting period.
+1. **BLOCK** — policy mismatch/expired term/unknown coverage/disabled
+   coverage; missing or unverified required document; forged, missing,
+   cross-claim, or unverified reference.
+2. **HUMAN_REVIEW** — incident date inside the waiting period; required
+   verified fact missing; verified fact matches a review trigger.
 3. **PASS** — all requirements satisfied and no trigger matched.
 
 ## 5. Change checklist

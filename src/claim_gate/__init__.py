@@ -1,7 +1,8 @@
 """Hermes entry point for ClaimGate.
 
-Slice 0 composition root: register only the submission tool and the
-interception hook. No policy, registry, audit, or CLI wiring is active yet.
+Slice 2 composition root: it registers the model-facing submission tool, the
+read-only operator/diagnostic tools, and the fail-closed interception hook.
+Composition only -- no business rule lives in this module.
 """
 
 from __future__ import annotations
@@ -20,10 +21,10 @@ logger = logging.getLogger(__name__)
 
 
 def register(ctx: Any) -> None:
-    """Register the Slice 0 tool and interception hook."""
+    """Register the ClaimGate tools and the interception hook."""
 
     from .hooks import execution_gate
-    from .tools import submissions
+    from .tools import admin, submissions
 
     ctx.register_tool(
         name="submit_claim_package",
@@ -32,5 +33,26 @@ def register(ctx: Any) -> None:
         handler=submissions.submit_claim_package,
     )
 
+    # Read-only tools. They never write to the trusted registries and they
+    # never release a claim for human review.
+    ctx.register_tool(
+        name="claim_check",
+        toolset="claim_gate",
+        schema=admin.CLAIM_CHECK_SCHEMA,
+        handler=admin.claim_check,
+    )
+    ctx.register_tool(
+        name="claim_policy_get",
+        toolset="claim_gate",
+        schema=admin.CLAIM_POLICY_GET_SCHEMA,
+        handler=admin.claim_policy_get,
+    )
+    ctx.register_tool(
+        name="claim_audit",
+        toolset="claim_gate",
+        schema=admin.CLAIM_AUDIT_SCHEMA,
+        handler=admin.claim_audit,
+    )
+
     ctx.register_hook("pre_tool_call", execution_gate.pre_tool_call)
-    logger.info("ClaimGate %s registered Slice 0 interception gate", PLUGIN_VERSION)
+    logger.info("ClaimGate %s registered the Slice 2 evidence firewall", PLUGIN_VERSION)

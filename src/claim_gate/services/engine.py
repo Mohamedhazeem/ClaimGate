@@ -1,11 +1,11 @@
 """The 3-tier decision engine and application-level assessment seam.
 
-This module owns the only deliberate business-logic gap in the scaffold:
-``DecisionEngine.evaluate``. Everything around it -- strict normalization,
-trusted registry resolution, policy loading, and package fingerprinting -- is
-wired and deterministic.
+``DecisionEngine.evaluate`` is a thin, pure adapter over
+``claim_gate.domain.policy.evaluate_claim``. The rules live in the domain
+layer so they can be unit-tested without a database; this module only
+composes them with the registry and the package fingerprint.
 
-When Slice 2 is implemented, ``evaluate`` must enforce this precedence:
+The enforced precedence is:
 
     1. BLOCK
        - policy_id mismatch, policy not effective, or unknown claim type
@@ -18,17 +18,16 @@ When Slice 2 is implemented, ``evaluate`` must enforce this precedence:
        - every requirement satisfied and no review trigger matched
 
 The engine is a pure function of the normalized claim, validated policy, and
-resolved registry records. It must never read raw model prose, wall-clock
-time, or the database.
+resolved registry records. It never reads raw model prose, wall-clock time,
+or the database.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
 
 from ..domain.claim import NormalizedClaim
-from ..domain.policy import Policy
+from ..domain.policy import Decision, DecisionResult, Policy, evaluate_claim
 from .audit import compute_package_hash
 from .registry import EvidenceRecord, EvidenceRegistry, FactRecord
 
@@ -39,20 +38,6 @@ __all__ = [
     "Evaluation",
     "assess_claim",
 ]
-
-
-class Decision(str, Enum):
-    PASS = "PASS"
-    BLOCK = "BLOCK"
-    HUMAN_REVIEW = "HUMAN_REVIEW"
-
-
-@dataclass(frozen=True, slots=True)
-class DecisionResult:
-    decision: Decision
-    code: str
-    message: str
-    reasons: tuple[str, ...] = ()
 
 
 class DecisionEngine:
@@ -67,15 +52,13 @@ class DecisionEngine:
     ) -> DecisionResult:
         """Return PASS, BLOCK, or HUMAN_REVIEW for one claim package.
 
-        TODO(slice-2): implement the checks documented in the module
-        docstring. Keep this method free of SQLite, filesystem, network, and
-        clock access so it remains exhaustively testable.
+        The method holds no SQLite, filesystem, network, or clock access, so
+        it stays exhaustively testable. All policy rules are implemented by
+        ``claim_gate.domain.policy.evaluate_claim``; this method only adapts
+        the registry records to the domain layer.
         """
 
-        raise NotImplementedError(
-            "ClaimGate decision engine is scaffolded but not implemented yet; "
-            "the gate fails closed until Slice 2 is complete."
-        )
+        return evaluate_claim(claim, policy, evidence, facts)
 
 
 @dataclass(frozen=True, slots=True)

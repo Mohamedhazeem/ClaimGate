@@ -34,11 +34,12 @@ class PolicyTests(unittest.TestCase):
         coverage = policy.coverage_for("collision")
         self.assertIsNotNone(coverage)
         assert coverage is not None
+        self.assertTrue(coverage.enabled)
         self.assertEqual(
             coverage.required_documents,
-            frozenset({"police_report", "repair_estimate"}),
+            ("police_report", "repair_estimate", "photo_evidence"),
         )
-        self.assertEqual(coverage.required_verified_facts, frozenset({"activity"}))
+        self.assertEqual(coverage.required_verified_facts, ("activity",))
         self.assertTrue(coverage.review_triggers[0].matches("activity", "racing"))
         self.assertFalse(coverage.review_triggers[0].matches("activity", "commuting"))
         self.assertIsNotNone(coverage.waiting_period)
@@ -100,13 +101,40 @@ class PolicyTests(unittest.TestCase):
         self.assertEqual(public["policy_id"], "AUTO-001")
         self.assertEqual(
             public["coverages"]["collision"]["required_documents"],
-            ["police_report", "repair_estimate"],
+            ["photo_evidence", "police_report", "repair_estimate"],
         )
+        self.assertTrue(public["coverages"]["collision"]["enabled"])
         self.assertEqual(
             public["coverages"]["collision"]["waiting_period"][
                 "coverage_available_on"
             ],
             "2026-01-31",
+        )
+
+    def test_enabled_flag_is_parsed_and_validated(self) -> None:
+        changed = copy.deepcopy(self.document)
+        changed["coverages"]["collision"]["enabled"] = False
+        policy = parse_policy(changed)
+        coverage = policy.coverage_for("collision")
+        assert coverage is not None
+        self.assertFalse(coverage.enabled)
+
+        changed = copy.deepcopy(self.document)
+        changed["coverages"]["collision"]["enabled"] = "yes"
+        with self.assertRaises(PolicyValidationError):
+            parse_policy(changed)
+
+    def test_requirement_order_follows_the_policy_document(self) -> None:
+        changed = copy.deepcopy(self.document)
+        changed["coverages"]["collision"]["required_documents"] = [
+            "repair_estimate",
+            "police_report",
+        ]
+        policy = parse_policy(changed)
+        coverage = policy.coverage_for("collision")
+        assert coverage is not None
+        self.assertEqual(
+            coverage.required_documents, ("repair_estimate", "police_report")
         )
 
 

@@ -296,10 +296,22 @@ SEED_EVIDENCE = [
     ("EV-002", "CLAIM-101", "photo_evidence", "verified", "system"),
     ("EV-003", "CLAIM-101", "repair_estimate", "verified", "system"),
     ("EV-004", "CLAIM-102", "police_report", "verified", "system"),
+    # Operator rows that are not yet verified. They exist so the "unverified
+    # reference" block path can be exercised; they never satisfy a policy
+    # requirement because the resolver rejects them first.
+    ("EV-005", "CLAIM-101", "photo_evidence", "pending", None),
 ]
 
 SEED_FACTS = [
+    # FACT-001 is the adverse activity fact: it matches the policy's
+    # ``activity: racing`` review trigger.
     ("FACT-001", "CLAIM-101", "activity", "racing", "verified"),
+    # FACT-002 is the benign activity fact. It satisfies the required
+    # ``activity`` fact without matching any review trigger, which is what a
+    # clean PASS submission references.
+    ("FACT-002", "CLAIM-101", "activity", "commuting", "verified"),
+    # FACT-003 has not been verified by an operator.
+    ("FACT-003", "CLAIM-101", "activity", "racing", "pending"),
 ]
 
 

@@ -6,9 +6,11 @@
   },
   "coverages": {
     "collision": {
+      "enabled": true,
       "required_documents": [
         "police_report",
-        "repair_estimate"
+        "repair_estimate",
+        "photo_evidence"
       ],
       "required_verified_facts": [
         "activity"

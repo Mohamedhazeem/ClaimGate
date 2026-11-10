@@ -16,13 +16,14 @@ one deterministic outcome:
 
 The model never gets to verify its own evidence.
 
-> **Project status:** this repository is the Step 1 scaffold. Domain contracts,
-> strict date handling, policy loading, trusted-registry lookups, package
+> **Project status:** Slice 2 is implemented. Domain contracts, strict date
+> handling, policy loading and evaluation, trusted-registry lookups, package
 > fingerprinting, audit/review persistence, the operator CLI, and the
-> fail-closed hook are implemented. The 3-tier decision body
-> (`DecisionEngine.evaluate`) is intentionally a documented Slice 2 seam, so
-> the gate fails closed until that slice lands. Do not use it to approve real
-> claims yet.
+> fail-closed hook are in place. `DecisionEngine.evaluate` now performs the
+> 3-tier decision, so the gate allows a submission only on a deterministic
+> PASS. Audit persistence, the review queue, and the operator CLI are wired
+> but are still wired for Slice 3 (release flow) before real claims are
+> approved.
 
 ## Installation
 
