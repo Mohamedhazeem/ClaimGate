@@ -38,7 +38,7 @@ The model never gets to verify its own evidence.
 ### Development install
 
 ```bash
-git clone <your-repository-url> claim-gate
+git clone https://github.com/Mohamedhazeem/ClaimGate.git claim-gate
 cd claim-gate
 
 # Link the checkout into the Hermes plugin directory.

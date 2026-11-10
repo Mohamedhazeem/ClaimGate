@@ -18,10 +18,6 @@ tags:
 
 provides_tools:
   - submit_claim_package
-  - claim_check
-  - claim_policy_get
-  - claim_audit
 
 provides_hooks:
   - pre_tool_call
-  - post_tool_call
