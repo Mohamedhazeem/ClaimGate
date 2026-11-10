@@ -102,6 +102,13 @@ class Demo:
 
     last_cli_output = ""
 
+    def review_status(self, claim_id: str = "CLAIM-101") -> str:
+        """Return the review status, asserting that a row exists."""
+
+        review = self.repository.get_review(claim_id)
+        assert review is not None, f"no review row for {claim_id}"
+        return str(review["status"])
+
     def beat(self, title: str, takeaway: str) -> None:
         print()
         print(f"=== {title} " + "=" * max(0, 60 - len(title)))
@@ -254,7 +261,7 @@ def main() -> int:
         failures += 0 if demo.expect("wrong hash is refused", code, 1) else 1
         failures += 0 if demo.expect(
             "the row stays pending",
-            demo.repository.get_review("CLAIM-101")["status"],
+            demo.review_status(),
             "pending",
         ) else 1
 
@@ -263,7 +270,7 @@ def main() -> int:
         failures += 0 if demo.expect("exact hash is released", code, 0) else 1
         failures += 0 if demo.expect(
             "the row is released",
-            demo.repository.get_review("CLAIM-101")["status"],
+            demo.review_status(),
             "released",
         ) else 1
 

@@ -39,6 +39,24 @@ where = ["src"]
 [tool.setuptools.package-data]
 claim_gate = ["services/schema.sql"]
 
+# Type stubs for the Hermes host API. They are analysis-only and are not
+# importable at runtime (``.pyi`` files carry no runtime code).
+"typings.plugins" = ["*.pyi"]
+"typings" = ["*.pyi"]
+
 [tool.ruff]
 target-version = "py310"
 line-length = 100
+
+# The Hermes Agent supplies `plugins.plugin_storage` and `hermes_constants`
+# at runtime. They are not PyPI packages, so a type checker cannot resolve
+# them from the environment. `typings/` holds hand-written stubs for exactly
+# the host API ClaimGate uses; it is on the analysis path only and is never
+# imported at runtime.
+[tool.pyright]
+include = ["src", "tests", "demo", "scripts", "typings"]
+extraPaths = ["src", "typings"]
+stubPath = "typings"
+pythonVersion = "3.10"
+typeCheckingMode = "basic"
+reportMissingModuleSource = false

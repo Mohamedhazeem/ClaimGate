@@ -109,12 +109,17 @@ def main() -> int:
         # 2. The CLI lists the queued claim.
         check("review-list succeeds", cli(["review-list"]) == 0)
 
+        def review_status() -> str:
+            review = repository.get_review("CLAIM-101")
+            assert review is not None, "no review row for CLAIM-101"
+            return str(review["status"])
+
         # 3. A wrong hash is refused.
         wrong = "b" * 64
         check("release with a wrong hash is refused", cli(["review-release", "CLAIM-101", "--hash", wrong]) == 1)
         check(
             "the review row is still pending",
-            repository.get_review("CLAIM-101")["status"] == "pending",
+            review_status() == "pending",
         )
 
         # 4. The exact hash releases it.
@@ -124,7 +129,7 @@ def main() -> int:
         )
         check(
             "the review row is released",
-            repository.get_review("CLAIM-101")["status"] == "released",
+            review_status() == "released",
         )
 
         # 5. The released package passes the gate.

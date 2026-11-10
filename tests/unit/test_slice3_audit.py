@@ -240,18 +240,24 @@ class OperatorReleaseTests(SliceThreeBase):
         self.assertEqual(len(rows), 1)
         return str(rows[0]["package_hash"])
 
+    def _review_status(self, claim_id: str = "CLAIM-101") -> str:
+        review = self.repository.get_review(claim_id)
+        self.assertIsNotNone(review)
+        assert review is not None
+        return str(review["status"])
+
     def test_release_requires_the_exact_hash(self) -> None:
         package_hash = self._queue_a_review()
 
         # A wrong hash is refused and leaves the row pending.
         self.assertEqual(self._run_cli(["review-release", "CLAIM-101", "--hash", HASH_B]), 1)
-        self.assertEqual(self.repository.get_review("CLAIM-101")["status"], "pending")
+        self.assertEqual(self._review_status(), "pending")
 
         # The exact hash releases it.
         self.assertEqual(
             self._run_cli(["review-release", "CLAIM-101", "--hash", package_hash]), 0
         )
-        self.assertEqual(self.repository.get_review("CLAIM-101")["status"], "released")
+        self.assertEqual(self._review_status(), "released")
 
     def test_release_of_an_unknown_claim_fails(self) -> None:
         self.assertEqual(self._run_cli(["review-release", "CLAIM-999", "--hash", HASH_A]), 1)

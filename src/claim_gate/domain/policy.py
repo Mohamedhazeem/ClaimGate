@@ -176,21 +176,34 @@ class EvidenceLike(Protocol):
     """Structural view of a resolved evidence row.
 
     The domain layer must not import the service layer, so the evaluator only
-    relies on the attributes the registry guarantees.
+    relies on the attributes the registry guarantees. The members are
+    declared read-only, which is what the frozen registry records provide.
     """
 
-    evidence_id: str
-    document_type: str
-    status: str
+    @property
+    def evidence_id(self) -> str: ...
+
+    @property
+    def document_type(self) -> str: ...
+
+    @property
+    def status(self) -> str: ...
 
 
 class FactLike(Protocol):
     """Structural view of a resolved incident-fact row."""
 
-    fact_id: str
-    fact_type: str
-    fact_value: str
-    status: str
+    @property
+    def fact_id(self) -> str: ...
+
+    @property
+    def fact_type(self) -> str: ...
+
+    @property
+    def fact_value(self) -> str: ...
+
+    @property
+    def status(self) -> str: ...
 
 
 @dataclass(frozen=True, slots=True)
