@@ -83,3 +83,8 @@ Thumbs.db
 
 # Planning material retained outside the plugin deliverable
 docs/plan/
+
+# The demo narration is a local rehearsal script, not part of the plugin
+# deliverable. The reproducible fixtures (demo/reset.py, demo/run_demo.py)
+# ARE committed.
+demo/DEMO.md

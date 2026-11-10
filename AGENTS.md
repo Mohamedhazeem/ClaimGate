@@ -12,8 +12,8 @@ security-sensitive production code, not a demo.
 > only on a deterministic PASS. Slice 3 is implemented: the gate writes the
 > audit row, queues a HUMAN_REVIEW package with its immutable package hash,
 > the ledger is append-only and idempotent, and only the operator CLI can
-> release a package. Do not "temporarily" bypass the gate to make a demo
-> work.
+> release a package. Slice 4 added the demo fixture under `demo/`. Do not
+> "temporarily" bypass the gate to make a demo work.
 
 ## 1. Non-negotiable security invariants
 
@@ -159,6 +159,8 @@ point for `submit_claim_package`.
 - `tools/admin.py`: `claim_check`, `claim_policy_get`, `claim_audit`.
 - `hooks/execution_gate.py`: enforcement adapters.
 - `cli/review.py`: operator-only review list/release.
+- `demo/reset.py`, `demo/run_demo.py`: demo fixtures. They are not runtime
+  code and must never be reachable from a tool or a hook.
 
 Slice 2 landed as a pure `domain/policy.py::evaluate_claim()` with
 `services/engine.py::DecisionEngine.evaluate()` as a thin adapter. The policy

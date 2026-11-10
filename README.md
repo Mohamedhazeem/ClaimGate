@@ -69,6 +69,20 @@ hermes plugins validate . --json
 registry checks in a temporary Hermes home. It should not create any runtime
 state in this repository.
 
+### Demo
+
+```bash
+python3 demo/reset.py      # drop + recreate + seed the fixture
+python3 demo/run_demo.py   # replay the 90-second storyboard; prints PASS
+```
+
+`demo/reset.py` restores the plugin's own trusted state: it drops and
+recreates every ClaimGate table, re-seeds the operator registries, and
+restores `policies/auto_policy.json`. `demo/run_demo.py` drives the real
+gate, the real handler, and the real operator CLI through the whole
+storyboard — missing document, forged ID, waiting period, operator CLI,
+clean pass, idempotent resubmission, and the hash-bound release.
+
 ## Architecture
 
 ClaimGate follows Domain-Driven Design with a strict dependency direction:
@@ -130,6 +144,9 @@ claim-gate/
 ├── tests/
 │   ├── unit/
 │   └── integration/
+├── demo/
+│   ├── reset.py                  # Drop + recreate + seed the fixture
+│   └── run_demo.py               # Replay the 90-second storyboard
 └── policies/
     └── auto_policy.json
 ```
