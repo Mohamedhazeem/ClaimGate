@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from claim_gate.domain.claim import parse_incident_date
-from claim_gate.services.registry import RegistryViolation, resolve_evidence
+from claim_gate.services.registry import resolve_evidence
 
 __all__ = ["PROTECTED_TOOL", "post_tool_call", "pre_tool_call"]
 
