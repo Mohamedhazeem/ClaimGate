@@ -200,7 +200,7 @@ Rules:
 The SQLite database is created through Hermes' `plugin_db()` helper at:
 
 ```text
-~/.hermes/plugin-data/claim-gate/data.db
+~/.hermes/plugin-data/claim_gate/data.db
 ```
 
 Schema ownership:
@@ -216,7 +216,7 @@ Schema ownership:
 Seed verified evidence and facts as an operator, for example:
 
 ```bash
-sqlite3 "$HOME/.hermes/plugin-data/claim-gate/data.db" <<'SQL'
+sqlite3 "$HOME/.hermes/plugin-data/claim_gate/data.db" <<'SQL'
 INSERT INTO evidence_registry
   (evidence_id, claim_id, document_type, status, verified_by)
 VALUES

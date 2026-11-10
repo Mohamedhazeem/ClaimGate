@@ -30,7 +30,7 @@ __all__ = [
     "seed_database",
 ]
 
-PLUGIN_ID = "claim-gate"
+PLUGIN_ID = "claim_gate"
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 
 _INITIALIZED_DATABASES: set[str] = set()
