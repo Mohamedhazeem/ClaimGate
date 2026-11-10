@@ -359,15 +359,15 @@ def resolve_evidence(
 
     actual_conn = conn or connection or db
     if actual_conn is None:
-        actual_conn = connect()
+        # Default path: each lookup opens and closes its own plugin_db connection.
+        registry = EvidenceRegistry()
+    else:
+        # Injected path: the caller owns the connection lifecycle.
+        registry = EvidenceRegistry(lambda: actual_conn, close_connections=False)
 
     evidence_list = list(evidence_ids or [])
     fact_list = list(fact_ids or [])
 
-    registry = EvidenceRegistry(
-        lambda: actual_conn,
-        close_connections=conn is None and connection is None and db is None,
-    )
     evidence_records = registry.resolve_evidence_ids(evidence_list, claim_id)
     fact_records = registry.resolve_fact_ids(fact_list, claim_id)
     return evidence_records, fact_records
