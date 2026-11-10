@@ -46,7 +46,7 @@ class SqliteStoreTests(unittest.TestCase):
                 [
                     ("EV-001", "CLAIM-101", "police_report", "verified", "operator-1"),
                     ("EV-002", "CLAIM-101", "repair_estimate", "verified", "operator-1"),
-                    ("EV-003", "CLAIM-101", "photos", "pending", None),
+                    ("EV-005", "CLAIM-101", "photos", "pending", None),
                     ("EV-010", "CLAIM-102", "police_report", "verified", "operator-1"),
                 ],
             )
@@ -86,38 +86,38 @@ class SqliteStoreTests(unittest.TestCase):
     def test_resolves_verified_evidence(self) -> None:
         self.seed()
         registry = EvidenceRegistry(self.factory)
-        records = registry.resolve_evidence_ids("CLAIM-101", ["EV-001", "EV-002"])
+        records = registry.resolve_evidence_ids(["EV-001", "EV-002"], "CLAIM-101")
         self.assertEqual([record.evidence_id for record in records], ["EV-001", "EV-002"])
 
     def test_rejects_forged_evidence(self) -> None:
         self.seed()
         registry = EvidenceRegistry(self.factory)
         with self.assertRaises(RegistryViolation) as raised:
-            registry.resolve_evidence_ids("CLAIM-101", ["EV-999"])
+            registry.resolve_evidence_ids(["EV-999"], "CLAIM-101")
         self.assertEqual(raised.exception.code, "EVIDENCE_NOT_FOUND")
 
     def test_rejects_cross_claim_evidence(self) -> None:
         self.seed()
         registry = EvidenceRegistry(self.factory)
         with self.assertRaises(RegistryViolation) as raised:
-            registry.resolve_evidence_ids("CLAIM-102", ["EV-001"])
+            registry.resolve_evidence_ids(["EV-001"], "CLAIM-102")
         self.assertEqual(raised.exception.code, "EVIDENCE_CLAIM_MISMATCH")
 
     def test_rejects_unverified_evidence(self) -> None:
         self.seed()
         registry = EvidenceRegistry(self.factory)
         with self.assertRaises(RegistryViolation) as raised:
-            registry.resolve_evidence_ids("CLAIM-101", ["EV-003"])
+            registry.resolve_evidence_ids(["EV-005"], "CLAIM-101")
         self.assertEqual(raised.exception.code, "EVIDENCE_NOT_VERIFIED")
 
     def test_resolves_facts_and_rejects_cross_claim_fact(self) -> None:
         self.seed()
         registry = EvidenceRegistry(self.factory)
-        records = registry.resolve_fact_ids("CLAIM-101", ["FACT-001"])
+        records = registry.resolve_fact_ids(["FACT-001"], "CLAIM-101")
         self.assertEqual(records[0].fact_value, "commuting")
 
         with self.assertRaises(RegistryViolation) as raised:
-            registry.resolve_fact_ids("CLAIM-101", ["FACT-010"])
+            registry.resolve_fact_ids(["FACT-010"], "CLAIM-101")
         self.assertEqual(raised.exception.code, "FACT_CLAIM_MISMATCH")
 
     def test_review_release_is_bound_to_exact_hash(self) -> None:

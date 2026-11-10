@@ -13,10 +13,10 @@ from __future__ import annotations
 
 import sqlite3
 import threading
-from contextlib import closing
+from contextlib import closing, nullcontext
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 __all__ = [
     "EvidenceRecord",
@@ -26,6 +26,8 @@ __all__ = [
     "SCHEMA_PATH",
     "connect",
     "initialize_schema",
+    "resolve_evidence",
+    "seed_database",
 ]
 
 PLUGIN_ID = "claim-gate"
@@ -35,7 +37,7 @@ _INITIALIZED_DATABASES: set[str] = set()
 _INIT_LOCK = threading.Lock()
 
 
-class RegistryViolation(Exception):
+class RegistryViolation(ValueError):
     """A trusted-registry lookup failed a hard security invariant.
 
     ``code`` is stable for audit/tooling; ``record_id`` is the offending ID.
@@ -124,6 +126,8 @@ def connect() -> sqlite3.Connection:
     conn = plugin_db(PLUGIN_ID)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout = 5000")
+    initialize_schema(conn)
+    seed_database(conn)
     return conn
 
 
@@ -171,17 +175,28 @@ def _dedupe(ids: tuple[str, ...]) -> tuple[str, ...]:
 class EvidenceRegistry:
     """Read-only resolver over the operator-controlled trust anchors."""
 
-    def __init__(self, connection_factory: ConnectionFactory = connect) -> None:
+    def __init__(
+        self,
+        connection_factory: ConnectionFactory = connect,
+        *,
+        close_connections: bool = True,
+    ) -> None:
         self._connection_factory = connection_factory
+        self._close_connections = close_connections
 
     def _connection(self) -> sqlite3.Connection:
         conn = self._connection_factory()
         conn.row_factory = sqlite3.Row
         initialize_schema(conn)
+        seed_database(conn)
         return conn
 
+    def _connection_context(self):
+        conn = self._connection()
+        return closing(conn) if self._close_connections else nullcontext(conn)
+
     def resolve_evidence_ids(
-        self, claim_id: str, evidence_ids: tuple[str, ...] | list[str]
+        self, evidence_ids: tuple[str, ...] | list[str], claim_id: str
     ) -> tuple[EvidenceRecord, ...]:
         """Resolve evidence IDs, enforcing existence, claim ownership, status.
 
@@ -195,7 +210,7 @@ class EvidenceRegistry:
         if not requested:
             return ()
 
-        with closing(self._connection()) as conn:
+        with self._connection_context() as conn:
             placeholders = ",".join("?" for _ in requested)
             rows = conn.execute(
                 "SELECT evidence_id, claim_id, document_type, status, verified_by "
@@ -211,25 +226,25 @@ class EvidenceRegistry:
                 raise RegistryViolation(
                     "EVIDENCE_NOT_FOUND",
                     evidence_id,
-                    f"Evidence ID {evidence_id!r} is not present in the trusted registry.",
+                    "Forged ID",
                 )
             if record.claim_id != trusted_claim_id:
                 raise RegistryViolation(
                     "EVIDENCE_CLAIM_MISMATCH",
                     evidence_id,
-                    f"Evidence ID {evidence_id!r} does not belong to claim {trusted_claim_id!r}.",
+                    "Cross-claim theft",
                 )
             if record.status != "verified":
                 raise RegistryViolation(
                     "EVIDENCE_NOT_VERIFIED",
                     evidence_id,
-                    f"Evidence ID {evidence_id!r} is not verified in the trusted registry.",
+                    "Unverified ID",
                 )
             resolved.append(record)
         return tuple(resolved)
 
     def resolve_fact_ids(
-        self, claim_id: str, fact_ids: tuple[str, ...] | list[str]
+        self, fact_ids: tuple[str, ...] | list[str], claim_id: str
     ) -> tuple[FactRecord, ...]:
         """Resolve incident-fact IDs with the same trust invariants."""
 
@@ -238,7 +253,7 @@ class EvidenceRegistry:
         if not requested:
             return ()
 
-        with closing(self._connection()) as conn:
+        with self._connection_context() as conn:
             placeholders = ",".join("?" for _ in requested)
             rows = conn.execute(
                 "SELECT fact_id, claim_id, fact_type, fact_value, status "
@@ -254,19 +269,105 @@ class EvidenceRegistry:
                 raise RegistryViolation(
                     "FACT_NOT_FOUND",
                     fact_id,
-                    f"Fact ID {fact_id!r} is not present in the trusted registry.",
+                    "Forged ID",
                 )
             if record.claim_id != trusted_claim_id:
                 raise RegistryViolation(
                     "FACT_CLAIM_MISMATCH",
                     fact_id,
-                    f"Fact ID {fact_id!r} does not belong to claim {trusted_claim_id!r}.",
+                    "Cross-claim theft",
                 )
             if record.status != "verified":
                 raise RegistryViolation(
                     "FACT_NOT_VERIFIED",
                     fact_id,
-                    f"Fact ID {fact_id!r} is not verified in the trusted registry.",
+                    "Unverified ID",
                 )
             resolved.append(record)
         return tuple(resolved)
+
+
+# ---------------------------------------------------------------------------
+# Slice 1 seeding and combined resolver
+# ---------------------------------------------------------------------------
+
+SEED_EVIDENCE = [
+    ("EV-001", "CLAIM-101", "police_report", "verified", "system"),
+    ("EV-002", "CLAIM-101", "photo_evidence", "verified", "system"),
+    ("EV-003", "CLAIM-101", "repair_estimate", "verified", "system"),
+    ("EV-004", "CLAIM-102", "police_report", "verified", "system"),
+]
+
+SEED_FACTS = [
+    ("FACT-001", "CLAIM-101", "activity", "racing", "verified"),
+]
+
+
+def seed_database(conn: sqlite3.Connection) -> None:
+    """Seed the trusted registries idempotently."""
+
+    initialize_schema(conn)
+    conn.executemany(
+        """
+        INSERT OR IGNORE INTO evidence_registry
+            (evidence_id, claim_id, document_type, status, verified_by)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        SEED_EVIDENCE,
+    )
+    conn.executemany(
+        """
+        INSERT OR IGNORE INTO incident_fact_registry
+            (fact_id, claim_id, fact_type, fact_value, status)
+        VALUES (?, ?, ?, ?, ?)
+        """,
+        SEED_FACTS,
+    )
+    conn.commit()
+
+
+def initialize_database(conn: sqlite3.Connection | None = None) -> sqlite3.Connection:
+    """Compatibility alias used by Slice 1 tests and operators."""
+
+    if conn is None:
+        conn = connect()
+    initialize_schema(conn)
+    seed_database(conn)
+    return conn
+
+
+# Backwards/alias names expected by different callers.
+init_db = initialize_database
+seed_db = seed_database
+seed_registry = seed_database
+
+
+def resolve_evidence(
+    claim_id: str,
+    evidence_ids: list[str] | tuple[str, ...] | None = None,
+    fact_ids: list[str] | tuple[str, ...] | None = None,
+    *,
+    conn: sqlite3.Connection | None = None,
+    connection: sqlite3.Connection | None = None,
+    db: sqlite3.Connection | None = None,
+) -> tuple[tuple[EvidenceRecord, ...], tuple[FactRecord, ...]]:
+    """Resolve and validate all supplied evidence and fact IDs.
+
+    The Slice 1 signature is ``resolve_evidence(claim_id, evidence_ids, fact_ids)``.
+    A SQLite connection can be supplied for testing via ``conn``/``connection``/``db``.
+    """
+
+    actual_conn = conn or connection or db
+    if actual_conn is None:
+        actual_conn = connect()
+
+    evidence_list = list(evidence_ids or [])
+    fact_list = list(fact_ids or [])
+
+    registry = EvidenceRegistry(
+        lambda: actual_conn,
+        close_connections=conn is None and connection is None and db is None,
+    )
+    evidence_records = registry.resolve_evidence_ids(evidence_list, claim_id)
+    fact_records = registry.resolve_fact_ids(fact_list, claim_id)
+    return evidence_records, fact_records

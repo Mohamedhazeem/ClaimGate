@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Mapping
 
 __all__ = [
@@ -184,3 +184,15 @@ def normalize_claim(payload: object) -> NormalizedClaim:
             payload.get("incident_fact_ids"), field="incident_fact_ids"
         ),
     )
+
+
+def parse_incident_date(date_str: str) -> date:
+    """Strictly parse an incident date as ``YYYY-MM-DD``.
+
+    Uses :meth:`datetime.strptime` so malformed strings raise ``ValueError``.
+    """
+
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise ValueError(f"Bad Date: {exc}") from exc

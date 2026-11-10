@@ -104,8 +104,8 @@ def assess_claim(
     those exceptions into a hard block.
     """
 
-    evidence = registry.resolve_evidence_ids(claim.claim_id, claim.evidence_ids)
-    facts = registry.resolve_fact_ids(claim.claim_id, claim.incident_fact_ids)
+    evidence = registry.resolve_evidence_ids(claim.evidence_ids, claim.claim_id)
+    facts = registry.resolve_fact_ids(claim.incident_fact_ids, claim.claim_id)
     resolved_engine = engine or DecisionEngine()
     result = resolved_engine.evaluate(claim, policy, evidence, facts)
     package_hash = compute_package_hash(

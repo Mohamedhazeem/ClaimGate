@@ -1,12 +1,16 @@
-"""Slice 0 interception gate.
+"""Slice 1 interception gate: strict date parsing plus trusted registry checks.
 
-Only `pre_tool_call` is active. It hardcodes the single forged-ID check
-required to prove interception before any database or policy logic exists.
+Policy evaluation is still Slice 2. This gate allows a submission only when
+its date parses and every supplied reference resolves in the operator-controlled
+registry.
 """
 
 from __future__ import annotations
 
 from typing import Any
+
+from claim_gate.domain.claim import parse_incident_date
+from claim_gate.services.registry import RegistryViolation, resolve_evidence
 
 __all__ = ["PROTECTED_TOOL", "post_tool_call", "pre_tool_call"]
 
@@ -14,22 +18,28 @@ PROTECTED_TOOL = "submit_claim_package"
 
 
 def pre_tool_call(tool_name: str, args: Any = None, task_id: str = "", **kwargs: Any) -> dict[str, str] | None:
-    """Block the protected tool only when the hardcoded forged ID is present."""
+    """Block the protected tool on bad dates or untrusted IDs."""
 
     if tool_name != PROTECTED_TOOL:
         return None
 
-    evidence_ids = []
-    if isinstance(args, dict):
-        evidence_ids = args.get("evidence_ids", [])
+    if not isinstance(args, dict):
+        return {"action": "block", "message": "ClaimGate: Invalid arguments"}
 
-    if "EV-999" in evidence_ids:
-        return {"action": "block", "message": "Forged ID"}
+    try:
+        parse_incident_date(str(args.get("incident_date", "")))
+        resolve_evidence(
+            args.get("claim_id"),
+            args.get("evidence_ids", []),
+            args.get("incident_fact_ids", []),
+        )
+    except Exception as exc:  # Fail closed on every parser or registry error.
+        return {"action": "block", "message": f"ClaimGate: {exc}"}
 
     return None
 
 
 def post_tool_call(*args: Any, **kwargs: Any) -> None:
-    """Slice 0 has no post-call work."""
+    """Slice 1 has no post-call work."""
 
     return None
