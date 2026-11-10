@@ -1,0 +1,27 @@
+name: claim-gate
+version: 0.1.0
+manifest_version: 2
+api_version: 1
+description: >-
+  Deterministic evidence-readiness firewall for insurance claim packages.
+  ClaimGate resolves model-supplied evidence and fact IDs against an
+  operator-controlled SQLite registry, evaluates policy, and fails closed.
+author: ClaimGate Contributors
+license: MIT
+kind: standalone
+tags:
+  - insurance
+  - claims
+  - compliance
+  - evidence
+  - security
+
+provides_tools:
+  - submit_claim_package
+  - claim_check
+  - claim_policy_get
+  - claim_audit
+
+provides_hooks:
+  - pre_tool_call
+  - post_tool_call

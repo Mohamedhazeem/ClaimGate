@@ -1,0 +1,29 @@
+{
+  "policy_id": "AUTO-001",
+  "policy_term": {
+    "effective_from": "2026-01-01",
+    "effective_through": "2026-12-31"
+  },
+  "coverages": {
+    "collision": {
+      "required_documents": [
+        "police_report",
+        "repair_estimate"
+      ],
+      "required_verified_facts": [
+        "activity"
+      ],
+      "review_triggers": [
+        {
+          "fact_type": "activity",
+          "values": [
+            "racing"
+          ]
+        }
+      ],
+      "waiting_period": {
+        "coverage_available_on": "2026-01-31"
+      }
+    }
+  }
+}

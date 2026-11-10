@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claim-gate"
+version = "0.1.0"
+description = "A deterministic evidence-readiness firewall for Hermes Agent claim submissions."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "ClaimGate Contributors" }]
+keywords = ["hermes", "plugin", "insurance", "claims", "evidence", "compliance"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Plugins",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Insurance",
+    "Typing :: Typed",
+]
+
+# ClaimGate is deliberately dependency-free at runtime. Hermes supplies any
+# YAML parsing it needs for plugin.yaml; policies are JSON and all ClaimGate
+# code uses the Python standard library only.
+dependencies = []
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+claim_gate = ["services/schema.sql"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
