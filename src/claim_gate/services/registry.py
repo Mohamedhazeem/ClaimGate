@@ -154,9 +154,43 @@ def initialize_schema(conn: sqlite3.Connection) -> None:
                 return
     sql = SCHEMA_PATH.read_text(encoding="utf-8")
     conn.executescript(sql)
+    _apply_column_migrations(conn)
     if key:
         with _INIT_LOCK:
             _INITIALIZED_DATABASES.add(key)
+
+
+# Columns added after the first release. ``CREATE TABLE IF NOT EXISTS`` does
+# not retrofit an existing database, so each one is applied with an
+# idempotent ``ALTER TABLE`` guarded by a ``PRAGMA table_info`` check.
+_COLUMN_MIGRATIONS: tuple[tuple[str, str, str], ...] = (
+    ("audit_log", "hermes_tool_call_id", "TEXT"),
+    ("audit_log", "execution_success", "INTEGER"),
+    ("claim_ledger", "submitted_at", "TEXT"),
+    ("human_review_queue", "reason", "TEXT"),
+)
+
+
+def _table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
+    rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+    return {str(row[1]) for row in rows}
+
+
+def _apply_column_migrations(conn: sqlite3.Connection) -> None:
+    """Add columns that a database created by an older release is missing."""
+
+    for table, column, declaration in _COLUMN_MIGRATIONS:
+        if table not in _table_names(conn):
+            continue
+        if column in _table_columns(conn, table):
+            continue
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {declaration}")
+    conn.commit()
+
+
+def _table_names(conn: sqlite3.Connection) -> set[str]:
+    rows = conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()
+    return {str(row[0]) for row in rows}
 
 
 ConnectionFactory = Callable[[], sqlite3.Connection]

@@ -1,8 +1,19 @@
 """Operator CLI: ``hermes claimgate review-list`` and ``review-release``.
 
 This module is registered through ``ctx.register_cli_command()``. It is never
-exposed as a model-facing tool, so the agent cannot approve or release its own
-claim. A release is accepted only for the exact package hash in the queue.
+exposed as a model-facing tool, so the agent cannot approve or release its
+own claim. A release is accepted only for the exact package hash in the
+queue.
+
+Commands:
+
+    hermes claimgate review-list
+    hermes claimgate review-release <claim_id> --hash <package_hash>
+    hermes claimgate ledger-list
+
+``review-release`` refuses a hash that does not match the queued package. The
+queue entry is reset to ``pending`` whenever the package changes, so a stale
+release can never apply to a modified claim.
 """
 
 from __future__ import annotations
@@ -13,7 +24,7 @@ import re
 
 from ..services.audit import AuditRepository
 
-__all__ = ["handle_command", "setup_argparse"]
+__all__ = ["handle_cli", "handle_command", "setup_argparse"]
 
 _HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -23,7 +34,7 @@ def setup_argparse(subparser: argparse.ArgumentParser) -> None:
 
     subparsers = subparser.add_subparsers(
         dest="claimgate_command",
-        metavar="{review-list,review-release}",
+        metavar="{review-list,review-release,ledger-list}",
     )
 
     review_list = subparsers.add_parser(
@@ -47,18 +58,34 @@ def setup_argparse(subparser: argparse.ArgumentParser) -> None:
         help="Release one exact reviewed package hash",
         description=(
             "Mark a queued package as operator-released. The claim_id and "
-            "--package-hash must match the queue entry exactly."
+            "--hash must match the queue entry exactly."
         ),
     )
     release.add_argument("claim_id", help="Claim identifier to release")
     release.add_argument(
+        "--hash",
         "--package-hash",
         required=True,
         dest="package_hash",
         help="Exact 64-character SHA-256 package hash shown by review-list",
     )
 
-    subparser.set_defaults(func=handle_command)
+    ledger = subparsers.add_parser(
+        "ledger-list",
+        help="List the append-only claim ledger",
+        description=(
+            "List every accepted claim package. The ledger is append-only and "
+            "keyed by claim_id, so a repeated submission never creates a "
+            "second row."
+        ),
+    )
+    ledger.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit machine-readable JSON instead of a table.",
+    )
+
+    subparser.set_defaults(func=handle_cli)
 
 
 def _print_json(value: object) -> None:
@@ -81,6 +108,8 @@ def _review_list(args: argparse.Namespace) -> int:
             f"{row['claim_id']:<20} {row['status']:<10} "
             f"{row['created_at']:<22} {row['package_hash']}"
         )
+        if row.get("reason"):
+            print(f"{'':<20} reason: {row['reason']}")
     return 0
 
 
@@ -91,7 +120,7 @@ def _review_release(args: argparse.Namespace) -> int:
         print("error: claim_id must not be empty")
         return 2
     if not _HASH_RE.fullmatch(package_hash):
-        print("error: --package-hash must be a 64-character lowercase SHA-256 hex digest")
+        print("error: --hash must be a 64-character lowercase SHA-256 hex digest")
         return 2
 
     repository = AuditRepository()
@@ -118,7 +147,26 @@ def _review_release(args: argparse.Namespace) -> int:
     return 0
 
 
-def handle_command(args: argparse.Namespace) -> int:
+def _ledger_list(args: argparse.Namespace) -> int:
+    rows = AuditRepository().list_claims()
+    if args.json:
+        _print_json({"ok": True, "count": len(rows), "claims": rows})
+        return 0
+
+    if not rows:
+        print("No ledger rows.")
+        return 0
+
+    print(f"{'CLAIM':<20} {'SUBMITTED':<22} PACKAGE_HASH")
+    for row in rows:
+        print(
+            f"{row['claim_id']:<20} {str(row['submitted_at']):<22} "
+            f"{row['package_hash']}"
+        )
+    return 0
+
+
+def handle_cli(args: argparse.Namespace) -> int:
     """Dispatch the selected CLI subcommand and return an exit code."""
 
     command = getattr(args, "claimgate_command", None)
@@ -126,5 +174,11 @@ def handle_command(args: argparse.Namespace) -> int:
         return _review_list(args)
     if command == "review-release":
         return _review_release(args)
-    print("usage: hermes claimgate {review-list,review-release} ...")
+    if command == "ledger-list":
+        return _ledger_list(args)
+    print("usage: hermes claimgate {review-list,review-release,ledger-list} ...")
     return 2
+
+
+# Backwards-compatible alias used by earlier wiring.
+handle_command = handle_cli

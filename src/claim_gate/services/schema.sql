@@ -46,20 +46,23 @@ CREATE INDEX IF NOT EXISTS idx_incident_fact_registry_claim
     ON incident_fact_registry (claim_id, status);
 
 CREATE TABLE IF NOT EXISTS audit_log (
-    tool_call_id TEXT PRIMARY KEY,
-    claim_id     TEXT NOT NULL,
-    decision     TEXT NOT NULL
-                 CHECK (decision IN (
-                     'PASS',
-                     'BLOCK',
-                     'HUMAN_REVIEW',
-                     'SUBMISSION_SUCCEEDED',
-                     'SUBMISSION_FAILED'
-                 )),
-    package_hash TEXT
-                 CHECK (package_hash IS NULL OR length(package_hash) = 64),
-    timestamp    TEXT NOT NULL
-                 DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    tool_call_id       TEXT PRIMARY KEY,
+    hermes_tool_call_id TEXT,
+    claim_id           TEXT NOT NULL,
+    decision           TEXT NOT NULL
+                       CHECK (decision IN (
+                           'PASS',
+                           'BLOCK',
+                           'HUMAN_REVIEW',
+                           'SUBMISSION_SUCCEEDED',
+                           'SUBMISSION_FAILED'
+                       )),
+    package_hash       TEXT
+                       CHECK (package_hash IS NULL OR length(package_hash) = 64),
+    execution_success  INTEGER
+                       CHECK (execution_success IS NULL OR execution_success IN (0, 1)),
+    timestamp          TEXT NOT NULL
+                       DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     CHECK (length(trim(tool_call_id)) > 0)
 );
 
@@ -69,6 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_claim_time
 CREATE TABLE IF NOT EXISTS claim_ledger (
     claim_id     TEXT PRIMARY KEY,
     package_hash TEXT NOT NULL CHECK (length(package_hash) = 64),
+    submitted_at TEXT,
     timestamp    TEXT NOT NULL
                  DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     CHECK (length(trim(claim_id)) > 0)
@@ -91,6 +95,7 @@ CREATE TABLE IF NOT EXISTS human_review_queue (
     package_hash TEXT NOT NULL CHECK (length(package_hash) = 64),
     status       TEXT NOT NULL DEFAULT 'pending'
                  CHECK (status IN ('pending', 'released')),
+    reason       TEXT,
     created_at   TEXT NOT NULL
                  DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     released_at  TEXT,

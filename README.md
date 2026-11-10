@@ -16,14 +16,16 @@ one deterministic outcome:
 
 The model never gets to verify its own evidence.
 
-> **Project status:** Slice 2 is implemented. Domain contracts, strict date
-> handling, policy loading and evaluation, trusted-registry lookups, package
-> fingerprinting, audit/review persistence, the operator CLI, and the
-> fail-closed hook are in place. `DecisionEngine.evaluate` now performs the
-> 3-tier decision, so the gate allows a submission only on a deterministic
-> PASS. Audit persistence, the review queue, and the operator CLI are wired
-> but are still wired for Slice 3 (release flow) before real claims are
-> approved.
+> **Project status:** Slice 3 is implemented -- the final core slice. Domain
+> contracts, strict date handling, policy loading and evaluation,
+> trusted-registry lookups, package fingerprinting, audit/review persistence,
+> the operator CLI, and the fail-closed hook are all in place.
+> `DecisionEngine.evaluate` performs the 3-tier decision, so the gate allows a
+> submission only on a deterministic PASS. A HUMAN_REVIEW package is queued
+> with its immutable package hash; only an operator can release that exact
+> hash through `hermes claimgate review-release`. The claim ledger is
+> append-only and idempotent: a repeated submission returns
+> `ALREADY_SUBMITTED` and never writes a second row.
 
 ## Installation
 
@@ -254,7 +256,8 @@ The AI has no approval path. An operator uses:
 ```bash
 hermes claimgate review-list
 hermes claimgate review-list --all --json
-hermes claimgate review-release CLAIM-101 --package-hash <64-char-hash>
+hermes claimgate review-release CLAIM-101 --hash <64-char-hash>
+hermes claimgate ledger-list
 ```
 
 A release is accepted only when `claim_id` and the exact package hash match the

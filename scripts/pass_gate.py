@@ -16,6 +16,11 @@ The scenarios are:
     Racing Trigger   EV-001..EV-003 + FACT-001      -> HUMAN_REVIEW (blocked)
     Waiting Period   EV-001..EV-003, 2026-01-10     -> HUMAN_REVIEW (blocked)
     Clean Pass       EV-001..EV-003 + FACT-002      -> handler runs
+
+Note: since Slice 3, a HUMAN_REVIEW decision is reported to the model as the
+generic ``ClaimGate: Pending Human Review``. The specific reason (missing
+document, racing activity, waiting period) is kept for the operator in the
+review queue and the audit trail, and is returned by ``claim_check``.
 """
 
 from __future__ import annotations
@@ -59,12 +64,12 @@ SCENARIOS = [
     (
         "Racing Trigger",
         claim(["EV-001", "EV-002", "EV-003"], "2026-11-06", ["FACT-001"]),
-        {"action": "block", "message": "Review required: activity is racing"},
+        {"action": "block", "message": "ClaimGate: Pending Human Review"},
     ),
     (
         "Waiting Period",
         claim(["EV-001", "EV-002", "EV-003"], "2026-01-10", ["FACT-002"]),
-        {"action": "block", "message": "Review required: incident within waiting period"},
+        {"action": "block", "message": "ClaimGate: Pending Human Review"},
     ),
     (
         "Clean Pass",

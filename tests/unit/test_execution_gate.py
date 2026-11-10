@@ -122,7 +122,7 @@ class SliceTwoGateTests(unittest.TestCase):
                 self._claim(["EV-001", "EV-002", "EV-003"], fact_ids=["FACT-001"]),
             )
         )
-        self.assertEqual(result["message"], "Review required: activity is racing")
+        self.assertEqual(result["message"], "ClaimGate: Pending Human Review")
         self.assertEqual(submissions.handler_invocation_count, 0)
 
     def test_incident_inside_waiting_period_requires_review(self) -> None:
@@ -136,9 +136,7 @@ class SliceTwoGateTests(unittest.TestCase):
                 ),
             )
         )
-        self.assertEqual(
-            result["message"], "Review required: incident within waiting period"
-        )
+        self.assertEqual(result["message"], "ClaimGate: Pending Human Review")
         self.assertEqual(submissions.handler_invocation_count, 0)
 
     def test_missing_activity_fact_requires_review(self) -> None:
@@ -148,7 +146,7 @@ class SliceTwoGateTests(unittest.TestCase):
                 self._claim(["EV-001", "EV-002", "EV-003"]),
             )
         )
-        self.assertIn("activity", result["message"])
+        self.assertEqual(result["message"], "ClaimGate: Pending Human Review")
         self.assertEqual(submissions.handler_invocation_count, 0)
 
     def test_complete_package_reaches_the_handler(self) -> None:

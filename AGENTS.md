@@ -9,9 +9,11 @@ security-sensitive production code, not a demo.
 > operator CLI, and the fail-closed hook are wired. Slice 2 is implemented:
 > `DecisionEngine.evaluate()` delegates to the pure
 > `domain/policy.py::evaluate_claim()`, so a protected submission is allowed
-> only on a deterministic PASS. Slice 3 (audit rows, review queue, release
-> flow) is still outstanding; do not "temporarily" bypass the gate to make a
-> demo work.
+> only on a deterministic PASS. Slice 3 is implemented: the gate writes the
+> audit row, queues a HUMAN_REVIEW package with its immutable package hash,
+> the ledger is append-only and idempotent, and only the operator CLI can
+> release a package. Do not "temporarily" bypass the gate to make a demo
+> work.
 
 ## 1. Non-negotiable security invariants
 
@@ -183,6 +185,10 @@ Before considering any change complete:
 - [ ] Package hash changes when evidence, facts, claim, or policy change.
 - [ ] Human release remains hash-bound and operator-only.
 - [ ] Tests cover the forged/cross-claim/missing/pending/trigger/waiting cases.
+- [ ] A HUMAN_REVIEW package is queued exactly once and stays `pending` until
+      an operator releases that exact hash.
+- [ ] The ledger is append-only: a repeated submission returns
+      `ALREADY_SUBMITTED` and never writes a second row.
 
 ## 6. Commands
 

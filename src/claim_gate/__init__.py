@@ -1,8 +1,13 @@
 """Hermes entry point for ClaimGate.
 
-Slice 2 composition root: it registers the model-facing submission tool, the
-read-only operator/diagnostic tools, and the fail-closed interception hook.
-Composition only -- no business rule lives in this module.
+Slice 3 composition root: it registers the model-facing submission tool, the
+read-only operator/diagnostic tools, the fail-closed interception hook, and
+the operator-only CLI. Composition only -- no business rule lives in this
+module.
+
+The operator CLI is registered through ``register_cli_command`` and is never
+exposed as a tool. The agent therefore has no path that approves, releases,
+or mutates a review row.
 """
 
 from __future__ import annotations
@@ -21,8 +26,9 @@ logger = logging.getLogger(__name__)
 
 
 def register(ctx: Any) -> None:
-    """Register the ClaimGate tools and the interception hook."""
+    """Register the ClaimGate tools, hooks, and operator CLI."""
 
+    from .cli import review as review_cli
     from .hooks import execution_gate
     from .tools import admin, submissions
 
@@ -55,4 +61,19 @@ def register(ctx: Any) -> None:
     )
 
     ctx.register_hook("pre_tool_call", execution_gate.pre_tool_call)
-    logger.info("ClaimGate %s registered the Slice 2 evidence firewall", PLUGIN_VERSION)
+    ctx.register_hook("post_tool_call", execution_gate.post_tool_call)
+
+    # Operator-only CLI. It is never registered as a tool, so the model has
+    # no way to release its own claim.
+    ctx.register_cli_command(
+        name="claimgate",
+        help="Inspect and release ClaimGate human-review packages",
+        description=(
+            "Operator commands for ClaimGate's human-review queue and the "
+            "append-only claim ledger."
+        ),
+        setup_fn=review_cli.setup_argparse,
+        handler_fn=review_cli.handle_cli,
+    )
+
+    logger.info("ClaimGate %s registered the Slice 3 evidence firewall", PLUGIN_VERSION)

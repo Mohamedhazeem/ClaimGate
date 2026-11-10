@@ -170,13 +170,30 @@ class SqliteStoreTests(unittest.TestCase):
         repository.record_audit("call-1", "CLAIM-101", "PASS", HASH_A)
         rows = repository.get_audit("CLAIM-101")
         self.assertEqual(rows[0]["decision"], "PASS")
+        self.assertIsNone(rows[0]["execution_success"])
 
+        # The execution outcome is recorded alongside the policy decision:
+        # the decision says what was decided, the flag says what happened.
         repository.record_outcome(
             "call-1", "CLAIM-101", succeeded=True, package_hash=HASH_A
         )
         rows = repository.get_audit("CLAIM-101")
-        self.assertEqual(rows[0]["decision"], "SUBMISSION_SUCCEEDED")
-        self.assertEqual(rows[0]["package_hash"], HASH_A)
+        self.assertEqual(rows[0]["decision"], "PASS")
+        self.assertEqual(rows[0]["execution_success"], 1)
+
+        repository.record_outcome(
+            "call-1", "CLAIM-101", succeeded=False, package_hash=HASH_A
+        )
+        rows = repository.get_audit("CLAIM-101")
+        self.assertEqual(rows[0]["execution_success"], 0)
+
+    def test_audit_row_is_updated_not_duplicated(self) -> None:
+        self.seed()
+        repository = AuditRepository(self.factory)
+        repository.record_audit("call-1", "CLAIM-101", "PASS", HASH_A)
+        repository.record_audit("call-1", "CLAIM-101", "PASS", HASH_A)
+        rows = repository.get_audit("CLAIM-101")
+        self.assertEqual(len(rows), 1)
 
 
 if __name__ == "__main__":
