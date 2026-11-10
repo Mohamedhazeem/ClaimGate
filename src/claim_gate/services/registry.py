@@ -13,17 +13,17 @@ from __future__ import annotations
 
 import sqlite3
 import threading
+from collections.abc import Callable
 from contextlib import closing, nullcontext
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
 
 __all__ = [
+    "SCHEMA_PATH",
     "EvidenceRecord",
     "EvidenceRegistry",
     "FactRecord",
     "RegistryViolation",
-    "SCHEMA_PATH",
     "connect",
     "initialize_schema",
     "resolve_evidence",
@@ -60,7 +60,7 @@ class EvidenceRecord:
     verified_by: str | None
 
     @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "EvidenceRecord":
+    def from_row(cls, row: sqlite3.Row) -> EvidenceRecord:
         return cls(
             evidence_id=row["evidence_id"],
             claim_id=row["claim_id"],
@@ -91,7 +91,7 @@ class FactRecord:
     status: str
 
     @classmethod
-    def from_row(cls, row: sqlite3.Row) -> "FactRecord":
+    def from_row(cls, row: sqlite3.Row) -> FactRecord:
         return cls(
             fact_id=row["fact_id"],
             claim_id=row["claim_id"],

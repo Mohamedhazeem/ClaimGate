@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from ..domain.claim import normalize_claim
 from ..domain.policy import load_policy
@@ -197,7 +198,7 @@ def claim_audit(args: dict[str, Any], **kwargs: Any) -> str:
         claim_id = _claim_id(args)
         limit = args.get("limit", 50)
         if isinstance(limit, bool) or not isinstance(limit, int):
-            raise ValueError("limit must be an integer")
+            raise TypeError("limit must be an integer")
         if not 1 <= limit <= 200:
             raise ValueError("limit must be between 1 and 200")
 

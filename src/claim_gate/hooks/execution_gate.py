@@ -34,7 +34,8 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 from claim_gate.domain.claim import ValidationError, normalize_claim
 from claim_gate.domain.policy import Decision, load_policy
@@ -296,14 +297,14 @@ def post_tool_call(
     """
 
     if tool_name != PROTECTED_TOOL:
-        return None
+        return
 
     try:
         if not isinstance(args, Mapping):
-            return None
+            return
         claim_id = args.get("claim_id")
         if not isinstance(claim_id, str) or not claim_id.strip():
-            return None
+            return
 
         succeeded = False
         package_hash: str | None = None
@@ -311,7 +312,7 @@ def post_tool_call(
         if isinstance(result, str):
             try:
                 parsed = json.loads(result)
-            except Exception:
+            except json.JSONDecodeError:
                 parsed = None
         if isinstance(parsed, Mapping):
             succeeded = parsed.get("ok") is True
@@ -333,4 +334,3 @@ def post_tool_call(
     except Exception:
         # Observer hooks must not break the session.
         logger.exception("ClaimGate post_tool_call audit failed")
-    return None
