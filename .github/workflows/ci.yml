@@ -85,12 +85,18 @@ jobs:
           ${{ runner.temp }}/hermes-agent/scripts/run-in-hermes-env
           python -m unittest discover -s tests -v
 
+      # The CLI is called through the checkout's own launcher. The composed
+      # pm environment puts the Hermes *tools* on PATH but not the `hermes`
+      # entry point, so a bare `hermes` resolves to whatever the machine
+      # happens to have installed -- or to nothing at all on a CI runner.
       - name: hermes plugins validate
         run: >-
           ${{ runner.temp }}/hermes-agent/scripts/run-in-hermes-env
-          hermes plugins validate . --install-deps
+          ${{ runner.temp }}/hermes-agent/.hermes/bin/hermes
+          plugins validate . --install-deps
 
       - name: hermes plugins doctor
         run: >-
           ${{ runner.temp }}/hermes-agent/scripts/run-in-hermes-env
-          hermes plugins doctor . --ci
+          ${{ runner.temp }}/hermes-agent/.hermes/bin/hermes
+          plugins doctor . --ci
