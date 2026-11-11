@@ -137,4 +137,15 @@ def demo_home(*, live: bool = False) -> Path:
     if override:
         return Path(override).expanduser()
 
+    # A caller who points HERMES_HOME at some *other* home has chosen that
+    # home deliberately -- a scratch profile for a recording, say -- so it is
+    # honoured. The real installation is never used implicitly: pointing
+    # HERMES_HOME at it still yields the throwaway home unless `live` is
+    # requested.
+    selected = os.environ.get("HERMES_HOME")
+    if selected:
+        candidate = Path(selected).expanduser()
+        if candidate != Path.home() / ".hermes":
+            return candidate
+
     return Path(tempfile.gettempdir()) / DEMO_HOME_NAME

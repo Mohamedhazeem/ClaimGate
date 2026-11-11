@@ -142,20 +142,18 @@ def main() -> int:
 
     print("ClaimGate demo reset")
     print(f"  hermes home : {home}")
-    if args.live:
-        if home == Path.home() / ".hermes":
-            print(
-                "  WARNING      : this is the REAL Hermes home. Every ClaimGate "
-                "table is dropped,\n"
-                "                 including the operator's trusted registries."
-            )
-        else:
-            print(
-                "  note         : HERMES_HOME is set, so that home is used "
-                "as-is. Every ClaimGate\n"
-                "                 table in it is dropped, including the trusted "
-                "registries."
-            )
+    if home == Path.home() / ".hermes":
+        print(
+            "  WARNING      : this is the REAL Hermes home. Every ClaimGate "
+            "table is dropped,\n"
+            "                 including the operator's trusted registries."
+        )
+    else:
+        print(
+            "  note         : every ClaimGate table in this home is dropped, "
+            "including the\n"
+            "                 trusted registries."
+        )
     policy_hash = reset_policy(POLICY_PATH)
     print(f"  policy      : {POLICY_PATH.name} ({policy_hash[:16]}...)")
     reset_database()
