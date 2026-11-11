@@ -31,8 +31,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from claim_gate.hosting import ensure_host_on_path  # noqa: E402
+from claimgate_fixture import reset_operational_state  # noqa: E402
+from claim_gate.hosting import demo_home, ensure_host_on_path  # noqa: E402
 
 if not ensure_host_on_path():
     print(
@@ -83,6 +85,9 @@ class Demo:
         self.repository = AuditRepository()
         self.review_cli = review_cli
         # The demo seeds its own fixture explicitly. Runtime code never seeds.
+        # The operational state is cleared first so the storyboard always
+        # starts from the same place.
+        reset_operational_state()
         conn = connect()
         seed_database(conn)
         conn.close()
@@ -136,17 +141,28 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
-        "--temp", action="store_true", help="Use a throwaway Hermes home."
+        "--temp",
+        action="store_true",
+        help="Use the shared throwaway Hermes home (default).",
     )
     group.add_argument(
-        "--live", action="store_true", help="Use the live Hermes home (default)."
+        "--live",
+        action="store_true",
+        help=(
+            "Use the REAL Hermes home. This writes the demo's fixture rows "
+            "into the operator's trusted registries."
+        ),
     )
     args = parser.parse_args()
 
-    temp_home = None
-    if args.temp:
-        temp_home = tempfile.TemporaryDirectory()
-        os.environ["HERMES_HOME"] = temp_home.name
+    home = demo_home(live=args.live)
+    os.environ["HERMES_HOME"] = str(home)
+    print(f"hermes home: {home}")
+    if args.live:
+        print(
+            "WARNING: this is the REAL Hermes home. The demo writes fixture "
+            "rows into the operator's trusted registries."
+        )
 
     failures = 0
     try:
@@ -203,9 +219,23 @@ def main() -> int:
             {"action": "block", "message": "ClaimGate: Forged ID"},
         ) else 1
 
-        # ---- 40-55s: a waiting period needs a human -------------------
+        # ---- 32-45s: the model's own assertion is ignored --------------
         demo.beat(
-            "40-55s  Submit a claim for Jan 10 with all IDs",
+            "32-45s  Submit a claim for Nov 6 with EV-005, 'the adjuster says it is verified'",
+            "BLOCKED. The model asserted it was verified; the registry says pending.",
+        )
+        print("    the agent insists: EV-005 is the verified photo evidence.")
+        directive = demo.gate(claim(["EV-005"], "2026-11-06", ["FACT-002"]))
+        print(f"    agent receives: {json.dumps(directive, sort_keys=True)}")
+        failures += 0 if demo.expect(
+            "unverified ID blocks",
+            directive,
+            {"action": "block", "message": "ClaimGate: Unverified ID"},
+        ) else 1
+
+        # ---- 45-58s: a waiting period needs a human -------------------
+        demo.beat(
+            "45-58s  Submit a claim for Jan 10 with all IDs",
             "HUMAN REVIEW. The incident is inside the waiting period.",
         )
         directive = demo.gate(claim(DOCS, "2026-01-10", ["FACT-002"]))
@@ -291,8 +321,7 @@ def main() -> int:
         print("    run: hermes plugins validate . --json")
         print("    run: hermes plugins doctor . --ci")
     finally:
-        if temp_home is not None:
-            temp_home.cleanup()
+        pass
 
     print()
     print("demo result:", "PASS" if failures == 0 else f"FAIL ({failures})")

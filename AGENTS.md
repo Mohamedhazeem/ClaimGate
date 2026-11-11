@@ -119,6 +119,14 @@ point for `submit_claim_package`.
   the schema without seeding, and no gate, tool, or hook path may call it.
   A fresh install stays empty and fails closed until an operator populates
   the trusted registries.
+- `PLUGIN_ID` is the single source of truth for the storage directory, and it
+  MUST equal the manifest name. `plugin_db()` derives
+  `<hermes home>/plugin-data/<PLUGIN_ID>/` from it, so a mismatch puts the
+  operator's state somewhere the agent will not look.
+- The demo scripts MUST default to a throwaway Hermes home. `demo/reset.py`
+  drops every ClaimGate table, including the trusted registries, so it may
+  only touch a real installation with an explicit `--live`. The demo lives
+  inside the plugin directory, which the agent's own shell tool can reach.
 
 ## 2. Determinism and dependency rules
 
@@ -187,6 +195,8 @@ Before considering any change complete:
 - [ ] No model-supplied verification/status field is trusted.
 - [ ] The gate never seeds `evidence_registry` / `incident_fact_registry`;
       seeding stays operator/demo-only.
+- [ ] `PLUGIN_ID` still equals the manifest name, and the demo scripts still
+      default to a throwaway Hermes home.
 - [ ] Every protected failure path returns an explicit block.
 - [ ] Waiting-period math uses `incident_date` only.
 - [ ] No new runtime dependency or network call.

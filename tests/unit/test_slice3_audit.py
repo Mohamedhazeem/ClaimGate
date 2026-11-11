@@ -188,7 +188,9 @@ class LedgerIdempotencyTests(SliceThreeBase):
     def _db_path(self) -> str:
         from hermes_constants import get_hermes_home
 
-        return str(get_hermes_home() / "plugin-data" / "claim_gate" / "data.db")
+        from claim_gate import PLUGIN_ID
+
+        return str(get_hermes_home() / "plugin-data" / PLUGIN_ID / "data.db")
 
 
 class AuditTrailTests(SliceThreeBase):

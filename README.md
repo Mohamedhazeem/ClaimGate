@@ -98,16 +98,27 @@ repository.
 ### Demo
 
 ```bash
-python3 demo/reset.py      # drop + recreate + seed the fixture
+python3 demo/reset.py      # rebuild the fixture
 python3 demo/run_demo.py   # replay the 90-second storyboard; prints PASS
+```
+
+Both scripts use a **shared throwaway Hermes home** (`/tmp/claimgate-demo-home`
+by default, or `$CLAIM_GATE_DEMO_HOME`), so the demo never touches a real
+installation. `demo/reset.py` drops and recreates every ClaimGate table —
+including the operator's trusted registries — so it requires an explicit
+`--live` to run against your real Hermes home:
+
+```bash
+python3 demo/reset.py --live && python3 demo/run_demo.py --live
 ```
 
 `demo/reset.py` restores the plugin's own trusted state: it drops and
 recreates every ClaimGate table, re-seeds the operator registries, and
 restores `policies/auto_policy.json`. `demo/run_demo.py` drives the real
 gate, the real handler, and the real operator CLI through the whole
-storyboard — missing document, forged ID, waiting period, operator CLI,
-clean pass, idempotent resubmission, and the hash-bound release.
+storyboard — missing document, forged ID, an *unverified* row the model
+insists is verified, waiting period, operator CLI, clean pass, idempotent
+resubmission, and the hash-bound release.
 
 ## Architecture
 
@@ -250,8 +261,12 @@ Rules:
 The SQLite database is created through Hermes' `plugin_db()` helper at:
 
 ```text
-~/.hermes/plugin-data/claim_gate/data.db
+~/.hermes/plugin-data/claim-gate/data.db
 ```
+
+The directory is derived from the manifest's plugin id, so it is the same
+path Hermes provisions for the plugin. `PLUGIN_ID` in
+`src/claim_gate/__init__.py` is the single source of truth for it.
 
 Schema ownership:
 
@@ -266,7 +281,7 @@ Schema ownership:
 Seed verified evidence and facts as an operator, for example:
 
 ```bash
-sqlite3 "$HOME/.hermes/plugin-data/claim_gate/data.db" <<'SQL'
+sqlite3 "$HOME/.hermes/plugin-data/claim-gate/data.db" <<'SQL'
 INSERT INTO evidence_registry
   (evidence_id, claim_id, document_type, status, verified_by)
 VALUES
@@ -374,7 +389,7 @@ What a user should know before installing ClaimGate:
 * **Reads and writes its own database.** ClaimGate reads and writes
   `audit_log`, `human_review_queue`, and `claim_ledger`, and reads
   `evidence_registry` and `incident_fact_registry`. All live in the plugin's
-  own SQLite file under `~/.hermes/plugin-data/claim_gate/data.db`. The
+  own SQLite file under `~/.hermes/plugin-data/claim-gate/data.db`. The
   plugin never reads another plugin's data or Hermes' `auth.json` / `.env`.
   The trusted registries are read-only at runtime: the plugin never seeds or
   writes them on the gate path. Seeding is an explicit operator/demo action

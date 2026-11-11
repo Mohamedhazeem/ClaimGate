@@ -25,10 +25,14 @@ from __future__ import annotations
 import importlib.util
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 __all__ = [
+    "DEMO_HOME_ENV",
+    "DEMO_HOME_NAME",
     "HOST_MODULE",
+    "demo_home",
     "ensure_host_on_path",
     "find_hermes_checkout",
     "host_available",
@@ -36,6 +40,12 @@ __all__ = [
 
 #: The host module a plugin uses for its durable state.
 HOST_MODULE = "plugins.plugin_storage"
+
+#: Environment variable that overrides the demo's Hermes home.
+DEMO_HOME_ENV = "CLAIM_GATE_DEMO_HOME"
+
+#: Directory name of the shared throwaway home used by the demo scripts.
+DEMO_HOME_NAME = "claimgate-demo-home"
 
 
 def _candidate_checkouts() -> list[Path]:
@@ -102,3 +112,29 @@ def ensure_host_on_path() -> bool:
         sys.path.insert(0, path)
 
     return _module_present(HOST_MODULE)
+
+
+def demo_home(*, live: bool = False) -> Path:
+    """Return the Hermes home the demo scripts should use.
+
+    The demo drops and recreates ClaimGate's tables, including the operator's
+    trusted registries. That must never happen to a real installation by
+    accident, so the default is a shared throwaway home under the system
+    temporary directory. Both demo scripts resolve the same path, so
+    ``reset.py`` and ``run_demo.py`` share one fixture.
+
+    ``live=True`` opts into the operator's real Hermes home. Callers are
+    expected to warn before doing so.
+    """
+
+    if live:
+        override = os.environ.get("HERMES_HOME")
+        if override:
+            return Path(override).expanduser()
+        return Path.home() / ".hermes"
+
+    override = os.environ.get(DEMO_HOME_ENV)
+    if override:
+        return Path(override).expanduser()
+
+    return Path(tempfile.gettempdir()) / DEMO_HOME_NAME

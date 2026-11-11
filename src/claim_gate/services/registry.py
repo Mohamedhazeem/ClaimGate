@@ -22,6 +22,11 @@ from contextlib import closing, nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 
+# The plugin id is the manifest name, and it is the single source of truth for
+# the storage path: ``plugin_db()`` derives ``<hermes home>/plugin-data/<id>/``
+# from it. AGENTS.md names that directory ``claim-gate``.
+from claim_gate import PLUGIN_ID
+
 __all__ = [
     "SCHEMA_PATH",
     "EvidenceRecord",
@@ -34,7 +39,6 @@ __all__ = [
     "seed_database",
 ]
 
-PLUGIN_ID = "claim_gate"
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
 
 _INITIALIZED_DATABASES: set[str] = set()
