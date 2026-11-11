@@ -7,6 +7,10 @@ missing, cross-claim, or non-verified records.
 Connections are obtained exclusively through Hermes' ``plugin_db()`` helper in
 production. A connection factory is injectable for tests and keeps the
 adapter independent of Hermes' import path at module import time.
+
+Runtime code never writes to the trusted tables. ``connect()`` creates the
+schema only; ``seed_database()`` is an explicit operator/demo action and is
+never called from the gate or any model-facing path.
 """
 
 from __future__ import annotations
@@ -119,6 +123,10 @@ def connect() -> sqlite3.Connection:
     ``plugin_db`` selects the active profile, creates the data directory,
     enables WAL where supported, and enables foreign keys. ClaimGate never
     opens an arbitrary database path.
+
+    This creates the schema but does not seed the trusted registries. Seeding
+    is an explicit operator/demo action (see :func:`seed_database`); a fresh
+    install stays empty and fails closed until an operator populates it.
     """
 
     from plugins.plugin_storage import plugin_db  # local import: host-provided
@@ -127,7 +135,6 @@ def connect() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout = 5000")
     initialize_schema(conn)
-    seed_database(conn)
     return conn
 
 
@@ -222,7 +229,6 @@ class EvidenceRegistry:
         conn = self._connection_factory()
         conn.row_factory = sqlite3.Row
         initialize_schema(conn)
-        seed_database(conn)
         return conn
 
     def _connection_context(self):
@@ -350,7 +356,13 @@ SEED_FACTS = [
 
 
 def seed_database(conn: sqlite3.Connection) -> None:
-    """Seed the trusted registries idempotently."""
+    """Seed the demo/operator fixture into the trusted registries.
+
+    This is an explicit operator or demo action. It is never called from
+    ``connect()``, the gate, or any model-facing path: the trusted tables are
+    operator-controlled, and the plugin must not manufacture verified rows.
+    ``demo/reset.py`` calls it directly to build the demo fixture.
+    """
 
     initialize_schema(conn)
     conn.executemany(
@@ -373,7 +385,11 @@ def seed_database(conn: sqlite3.Connection) -> None:
 
 
 def initialize_database(conn: sqlite3.Connection | None = None) -> sqlite3.Connection:
-    """Compatibility alias used by Slice 1 tests and operators."""
+    """Initialize the schema and seed the fixture (operator/test helper).
+
+    This is an explicit, opt-in helper. The gate never calls it; it uses
+    ``connect()`` and leaves the trusted registries untouched.
+    """
 
     if conn is None:
         conn = connect()

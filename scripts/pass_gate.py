@@ -94,10 +94,12 @@ def main() -> int:
         os.environ["HERMES_HOME"] = temp_home.name
 
     from claim_gate.hooks.execution_gate import pre_tool_call
-    from claim_gate.services.registry import connect
+    from claim_gate.services.registry import connect, seed_database
     from claim_gate.tools import submissions
 
-    connect()  # initialize and seed the trusted registries
+    conn = connect()  # initialize the schema
+    seed_database(conn)  # explicit demo fixture; the gate never seeds
+    conn.close()
     submissions.reset_handler_invocation_count()
 
     failures = 0

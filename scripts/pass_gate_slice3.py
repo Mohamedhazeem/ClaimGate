@@ -64,10 +64,12 @@ def main() -> int:
     from claim_gate.cli import review as review_cli
     from claim_gate.hooks.execution_gate import pre_tool_call
     from claim_gate.services.audit import AuditRepository
-    from claim_gate.services.registry import connect
+    from claim_gate.services.registry import connect, seed_database
     from claim_gate.tools import submissions
 
-    connect()
+    conn = connect()  # initialize the schema
+    seed_database(conn)  # explicit demo fixture; the gate never seeds
+    conn.close()
     submissions.reset_handler_invocation_count()
     repository = AuditRepository()
 

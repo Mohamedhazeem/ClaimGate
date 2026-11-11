@@ -252,6 +252,10 @@ SQL
 
 The model cannot write these tables. There is no verification tool, no
 "mark verified" command, and no path from tool arguments into the registry.
+The plugin does not seed these tables at runtime either: `seed_database()` is
+an explicit operator/demo action and is never called by `connect()` or the
+gate, so a fresh install fails closed until an operator populates the
+registries.
 
 ## Tools
 
@@ -342,6 +346,12 @@ What a user should know before installing ClaimGate:
   `evidence_registry` and `incident_fact_registry`. All live in the plugin's
   own SQLite file under `~/.hermes/plugin-data/claim_gate/data.db`. The
   plugin never reads another plugin's data or Hermes' `auth.json` / `.env`.
+  The trusted registries are read-only at runtime: the plugin never seeds or
+  writes them on the gate path. Seeding is an explicit operator/demo action
+  (`demo/reset.py`).
+* **Registers an operator CLI.** `hermes claimgate` exposes `review-list`,
+  `review-release`, and `ledger-list`. It is registered through
+  `ctx.register_cli_command()` and is never exposed as a model-facing tool.
 * **Reads its own policy file.** `policies/auto_policy.json` is read at
   decision time. The `CLAIM_GATE_POLICY` environment variable can override
   the path.

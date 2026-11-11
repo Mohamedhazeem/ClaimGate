@@ -21,7 +21,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, "/home/hazeem/.hermes/hermes-agent")
 
 from claim_gate.hooks.execution_gate import pre_tool_call  # noqa: E402
-from claim_gate.services.registry import connect  # noqa: E402
+from claim_gate.services.registry import connect, seed_database  # noqa: E402
 from claim_gate.tools import submissions  # noqa: E402
 
 
@@ -31,7 +31,9 @@ class SliceTwoGateTests(unittest.TestCase):
         self._temp = tempfile.TemporaryDirectory()
         os.environ["HERMES_HOME"] = self._temp.name
         submissions.reset_handler_invocation_count()
-        connect()  # initialize and seed the default database
+        conn = connect()
+        seed_database(conn)
+        conn.close()
 
     def tearDown(self) -> None:
         if self._old_home is None:

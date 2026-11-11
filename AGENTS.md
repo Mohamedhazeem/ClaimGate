@@ -115,6 +115,10 @@ point for `submit_claim_package`.
 - Keep writes transactional. Never write to `evidence_registry` or
   `incident_fact_registry` from the gate. `claim_ledger` is append-only and
   protected by triggers.
+- `seed_database()` is an operator/demo action only. `connect()` MUST create
+  the schema without seeding, and no gate, tool, or hook path may call it.
+  A fresh install stays empty and fails closed until an operator populates
+  the trusted registries.
 
 ## 2. Determinism and dependency rules
 
@@ -179,6 +183,8 @@ handler. The precedence is:
 Before considering any change complete:
 
 - [ ] No model-supplied verification/status field is trusted.
+- [ ] The gate never seeds `evidence_registry` / `incident_fact_registry`;
+      seeding stays operator/demo-only.
 - [ ] Every protected failure path returns an explicit block.
 - [ ] Waiting-period math uses `incident_date` only.
 - [ ] No new runtime dependency or network call.

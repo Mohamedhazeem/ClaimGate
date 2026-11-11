@@ -69,14 +69,17 @@ class Demo:
         from claim_gate.cli import review as review_cli
         from claim_gate.hooks.execution_gate import pre_tool_call
         from claim_gate.services.audit import AuditRepository
-        from claim_gate.services.registry import connect
+        from claim_gate.services.registry import connect, seed_database
         from claim_gate.tools import submissions
 
         self.pre_tool_call = pre_tool_call
         self.submissions = submissions
         self.repository = AuditRepository()
         self.review_cli = review_cli
-        connect()
+        # The demo seeds its own fixture explicitly. Runtime code never seeds.
+        conn = connect()
+        seed_database(conn)
+        conn.close()
 
     # -- helpers -------------------------------------------------------
 

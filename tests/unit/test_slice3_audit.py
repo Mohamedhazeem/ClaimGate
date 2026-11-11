@@ -33,7 +33,7 @@ from claim_gate.services.audit import (  # noqa: E402
     compute_package_hash,
     generate_package_hash,
 )
-from claim_gate.services.registry import connect  # noqa: E402
+from claim_gate.services.registry import connect, seed_database  # noqa: E402
 from claim_gate.tools import submissions  # noqa: E402
 
 HASH_A = "a" * 64
@@ -46,7 +46,9 @@ class SliceThreeBase(unittest.TestCase):
         self._temp = tempfile.TemporaryDirectory()
         os.environ["HERMES_HOME"] = self._temp.name
         submissions.reset_handler_invocation_count()
-        connect()  # initialize and seed the default database
+        conn = connect()
+        seed_database(conn)
+        conn.close()
         self.repository = AuditRepository()
 
     def tearDown(self) -> None:
