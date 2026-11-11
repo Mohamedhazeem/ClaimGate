@@ -14,12 +14,12 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # The Hermes release the plugin is developed and gated against. This is the
-  # CalVer tag of Hermes 0.23.1, which satisfies the plugin's
+  # The Hermes release the plugin is developed and gated against: v0.23.1 is
+  # the current Hermes release and satisfies the plugin's
   # ``requires_hermes: ">=0.23.0"`` floor. Bumping it is a deliberate change:
   # the authoritative admission gate is the catalog CI in hermes-agent, which
   # always runs against the current Hermes release.
-  HERMES_TAG: v2026.9.24
+  HERMES_TAG: v0.23.1
 
 jobs:
   tests:
