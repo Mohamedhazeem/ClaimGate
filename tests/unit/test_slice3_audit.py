@@ -24,9 +24,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
-sys.path.insert(0, "/home/hazeem/.hermes/hermes-agent")
 
 from claim_gate.cli import review as review_cli  # noqa: E402
+from claim_gate.hosting import ensure_host_on_path  # noqa: E402
 from claim_gate.hooks.execution_gate import post_tool_call, pre_tool_call  # noqa: E402
 from claim_gate.services.audit import (  # noqa: E402
     AuditRepository,
@@ -36,10 +36,18 @@ from claim_gate.services.audit import (  # noqa: E402
 from claim_gate.services.registry import connect, seed_database  # noqa: E402
 from claim_gate.tools import submissions  # noqa: E402
 
+# The audit trail and the review queue live in the Hermes plugin database.
+# Without a Hermes checkout those checks are skipped, never failed.
+HOST_AVAILABLE = ensure_host_on_path()
+
 HASH_A = "a" * 64
 HASH_B = "b" * 64
 
 
+@unittest.skipUnless(
+    HOST_AVAILABLE,
+    "requires the Hermes host API (plugins.plugin_storage)",
+)
 class SliceThreeBase(unittest.TestCase):
     def setUp(self) -> None:
         self._old_home = os.environ.get("HERMES_HOME")

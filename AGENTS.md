@@ -163,6 +163,8 @@ point for `submit_claim_package`.
 - `tools/admin.py`: `claim_check`, `claim_policy_get`, `claim_audit`.
 - `hooks/execution_gate.py`: enforcement adapters.
 - `cli/review.py`: operator-only review list/release.
+- `hosting.py`: development-time Hermes host resolution for the tests, the
+  demo, and the scripts. It is never imported by the runtime path.
 - `demo/reset.py`, `demo/run_demo.py`: demo fixtures. They are not runtime
   code and must never be reachable from a tool or a hook.
 
@@ -211,6 +213,13 @@ hermes plugins validate . --json
 
 `hermes plugins doctor` uses a temporary Hermes home. It must pass without
 creating runtime state in the plugin directory.
+
+`.github/workflows/ci.yml` runs the same checks on every push and pull
+request. The `hosted` job installs a pinned Hermes release and runs the full
+suite plus `hermes plugins validate --install-deps` and
+`hermes plugins doctor --ci` against the real host API. A host-dependent
+check that cannot reach a Hermes host skips with a stated reason; it must
+never be silenced or downgraded to a pass.
 
 ## 7. Forbidden shortcuts
 

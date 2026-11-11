@@ -24,7 +24,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
-sys.path.insert(0, "/home/hazeem/.hermes/hermes-agent")
+
+from claim_gate.hosting import ensure_host_on_path  # noqa: E402
+
+# The demo fixture drives the real plugin database through the Hermes host
+# API. Without a Hermes checkout those checks are skipped, never failed.
+HOST_AVAILABLE = ensure_host_on_path()
 
 
 def _load_demo_module():
@@ -39,6 +44,10 @@ def _load_demo_module():
     return module
 
 
+@unittest.skipUnless(
+    HOST_AVAILABLE,
+    "requires the Hermes host API (plugins.plugin_storage)",
+)
 class DemoFixtureTests(unittest.TestCase):
     def setUp(self) -> None:
         self._old_home = os.environ.get("HERMES_HOME")

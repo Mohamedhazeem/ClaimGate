@@ -48,9 +48,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-HERMES_AGENT = Path.home() / ".hermes" / "hermes-agent"
-if HERMES_AGENT.is_dir():
-    sys.path.insert(0, str(HERMES_AGENT))
+from claim_gate.hosting import ensure_host_on_path  # noqa: E402
+
+if not ensure_host_on_path():
+    print(
+        "error: the Hermes host API (plugins.plugin_storage) is not available.\n"
+        "Run this script inside a Hermes install, or point HERMES_AGENT at a "
+        "Hermes checkout."
+    )
+    raise SystemExit(2)
 
 # The canonical demo policy. `tests/unit/test_demo_fixture.py` asserts that
 # this template still matches `policies/auto_policy.json`, so the two can

@@ -69,6 +69,27 @@ hermes plugins validate . --json
 registry checks in a temporary Hermes home. It should not create any runtime
 state in this repository.
 
+The suite needs the Hermes host API (`plugins.plugin_storage`) for the checks
+that touch the plugin database. It is located automatically, in order, from
+`HERMES_AGENT`, `HERMES_HOME`, `~/.hermes/hermes-agent`, or an installed
+`plugins` package. When no host is found, those checks **skip** rather than
+fail, so the domain, policy, hashing, and date contracts still run on a bare
+interpreter. Nothing is silenced: with a host present the full suite runs.
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request:
+
+| Job | What it does |
+| --- | --- |
+| `tests` | Byte-compiles the runtime package, runs the suite with no Hermes host (the host-dependent checks skip themselves), and rejects compiled payloads in the tracked tree. |
+| `hosted` | Installs a pinned Hermes release, runs the **full** suite against the real host API, then runs `hermes plugins validate . --install-deps` and `hermes plugins doctor . --ci`. |
+
+The `hosted` job pins its Hermes release through the `HERMES_TAG` variable in
+the workflow. The authoritative admission gate is still the catalog CI in
+`NousResearch/hermes-agent`, which validates the pinned commit of this
+repository.
+
 ### Demo
 
 ```bash
@@ -122,10 +143,14 @@ claim-gate/
 ├── AGENTS.md                    # Strict contributor/AI-agent contract
 ├── README.md
 ├── LICENSE
+├── .github/
+│   └── workflows/
+│       └── ci.yml               # Tests + catalog gate on every push
 ├── docs/adr/
 │   └── 001-use-ddd-and-trusted-registries.md
 ├── src/claim_gate/
 │   ├── __init__.py              # Composition root (register)
+│   ├── hosting.py               # Dev-only: locate the Hermes host
 │   ├── domain/
 │   │   ├── claim.py             # NormalizedClaim, strict date math
 │   │   └── policy.py            # Policy schema, validation, policy hash
