@@ -83,10 +83,15 @@ interpreter. Nothing is silenced: with a host present the full suite runs.
 | Job | What it does |
 | --- | --- |
 | `tests` | Byte-compiles the runtime package, runs the suite with no Hermes host (the host-dependent checks skip themselves), and rejects compiled payloads in the tracked tree. |
-| `hosted` | Installs a pinned Hermes release, runs the **full** suite against the real host API, then runs `hermes plugins validate . --install-deps` and `hermes plugins doctor . --ci`. |
+| `hosted` | Builds a pinned Hermes release from its own lockfile, runs the **full** suite against the real host API, then runs `hermes plugins validate . --install-deps` and `hermes plugins doctor . --ci`. |
 
 The `hosted` job pins its Hermes release through the `HERMES_TAG` variable in
-the workflow. The authoritative admission gate is still the catalog CI in
+the workflow, and prepares it with Hermes' own `setup-hermes.sh` rather than a
+pip install: the pinned release's `pyproject.toml` cannot be resolved by pip
+(it pins `pillow==13.0.0` while its own `browser-harness` requires
+`pillow==12.3.0`), and Hermes' lockfile is the authority for its runtime.
+
+The authoritative admission gate is still the catalog CI in
 `NousResearch/hermes-agent`, which validates the pinned commit of this
 repository.
 

@@ -26,9 +26,9 @@ jobs:
     name: Tests (no Hermes host required)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -53,10 +53,9 @@ jobs:
     name: Tests and catalog gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      # Hermes pins its runtime dependencies to Python 3.14.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.14"
 
@@ -70,26 +69,28 @@ jobs:
             https://github.com/NousResearch/hermes-agent.git \
             "${{ runner.temp }}/hermes-agent"
 
-      - name: Install Hermes
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install "${{ runner.temp }}/hermes-agent"
+      # Hermes' own dev-environment entry point. It stages the pinned uv from
+      # pm/lock.json and builds the dependency environment Hermes commits for
+      # a checkout. A pip install of the same tag does not work: that release
+      # pins pillow==13.0.0 while its own browser-harness requires
+      # pillow==12.3.0, so the resolution is unsatisfiable. pm resolves the
+      # environment from the lockfile instead.
+      - name: Prepare the Hermes runtime
+        working-directory: ${{ runner.temp }}/hermes-agent
+        run: bash setup-hermes.sh --runtime-only
 
-      # With a host on the path, every check runs: nothing is skipped.
+      # With the Hermes host on the path, every check runs: nothing is skipped.
       - name: Run the full test suite
-        env:
-          HERMES_AGENT: ${{ runner.temp }}/hermes-agent
-          PYTHONPATH: ${{ runner.temp }}/hermes-agent
-        run: python -m unittest discover -s tests -v
+        run: >-
+          ${{ runner.temp }}/hermes-agent/scripts/run-in-hermes-env
+          python -m unittest discover -s tests -v
 
       - name: hermes plugins validate
-        env:
-          HERMES_AGENT: ${{ runner.temp }}/hermes-agent
-          PYTHONPATH: ${{ runner.temp }}/hermes-agent
-        run: hermes plugins validate . --install-deps
+        run: >-
+          ${{ runner.temp }}/hermes-agent/scripts/run-in-hermes-env
+          hermes plugins validate . --install-deps
 
       - name: hermes plugins doctor
-        env:
-          HERMES_AGENT: ${{ runner.temp }}/hermes-agent
-          PYTHONPATH: ${{ runner.temp }}/hermes-agent
-        run: hermes plugins doctor . --ci
+        run: >-
+          ${{ runner.temp }}/hermes-agent/scripts/run-in-hermes-env
+          hermes plugins doctor . --ci
