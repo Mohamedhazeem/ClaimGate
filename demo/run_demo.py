@@ -158,7 +158,7 @@ def main() -> int:
     home = demo_home(live=args.live)
     os.environ["HERMES_HOME"] = str(home)
     print(f"hermes home: {home}")
-    if args.live:
+    if args.live and home == Path.home() / ".hermes":
         print(
             "WARNING: this is the REAL Hermes home. The demo writes fixture "
             "rows into the operator's trusted registries."
