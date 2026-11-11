@@ -8,6 +8,8 @@ description: >-
   operator-controlled SQLite registry, evaluates policy, and fails closed.
 author: ClaimGate Contributors
 license: MIT
+homepage: https://github.com/Mohamedhazeem/ClaimGate
+requires_hermes: ">=0.23.0"
 kind: standalone
 tags:
   - insurance

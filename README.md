@@ -330,6 +330,33 @@ third-party dependencies. The decision is deterministic and local.
 `claim_ledger` is append-only and protected by update/delete triggers. The
 operator review queue records pending/released state and timestamps.
 
+## Disclosure (catalog submission)
+
+What a user should know before installing ClaimGate:
+
+* **Intercepts tool calls.** ClaimGate registers a `pre_tool_call` hook that
+  intercepts `submit_claim_package` and may block it. No other tool is
+  affected. The decision is deterministic and local.
+* **Reads and writes its own database.** ClaimGate reads and writes
+  `audit_log`, `human_review_queue`, and `claim_ledger`, and reads
+  `evidence_registry` and `incident_fact_registry`. All live in the plugin's
+  own SQLite file under `~/.hermes/plugin-data/claim_gate/data.db`. The
+  plugin never reads another plugin's data or Hermes' `auth.json` / `.env`.
+* **Reads its own policy file.** `policies/auto_policy.json` is read at
+  decision time. The `CLAIM_GATE_POLICY` environment variable can override
+  the path.
+* **No network, no shell, no background processes.** There are no HTTP
+  calls, external APIs, model calls, subprocesses, or runtime third-party
+  dependencies. The decision is deterministic and local.
+* **No credentials.** ClaimGate declares no `requires_env` and reads no
+  secret store. It does not touch OAuth tokens.
+* **No self-update.** There is no in-app updater. Updates reach users only
+  through the catalog's SHA-bump process.
+* **Operator-only approval.** The only way to release a queued package is
+  the `hermes claimgate review-release` CLI, which requires an exact
+  package-hash match. The agent has no tool or slash command that can
+  approve, release, or mutate a review row.
+
 ## What ClaimGate is not
 
 - It is not a fraud model or a probability score.
